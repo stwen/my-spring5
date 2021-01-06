@@ -16,20 +16,9 @@
 
 package org.springframework.aop.framework.autoproxy;
 
-import java.beans.PropertyDescriptor;
-import java.lang.reflect.Constructor;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.aopalliance.aop.Advice;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.aop.Advisor;
 import org.springframework.aop.Pointcut;
 import org.springframework.aop.TargetSource;
@@ -50,6 +39,11 @@ import org.springframework.beans.factory.config.SmartInstantiationAwareBeanPostP
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Constructor;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * {@link org.springframework.beans.factory.config.BeanPostProcessor} implementation
@@ -91,6 +85,8 @@ import org.springframework.util.StringUtils;
  * @since 13.10.2003
  */
 @SuppressWarnings("serial")
+// 提供为给定的bean对象创建对应的代理对象的方法实现
+// 同时提供代理对象需要的方法拦截器的创建，其中拦截器包括所有代理对象公用的拦截器和某个代理对象私有的拦截器
 public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		implements SmartInstantiationAwareBeanPostProcessor, BeanFactoryAware {
 
@@ -253,10 +249,12 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		return wrapIfNecessary(bean, beanName, cacheKey);
 	}
 
+	// 在bean对象实例的创建过程中，在创建bean对象实例之前，先调用这个方法，看是否需要创建一个AOP代理对象直接返回
 	@Override
 	public Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
 		Object cacheKey = getCacheKey(beanClass, beanName);
 
+		// 返回null，则表示不是AOP的目标对象，不需要创建代理对象
 		if (!StringUtils.hasLength(beanName) || !this.targetSourcedBeans.contains(beanName)) {
 			if (this.advisedBeans.containsKey(cacheKey)) {
 				return null;
@@ -275,9 +273,18 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			if (StringUtils.hasLength(beanName)) {
 				this.targetSourcedBeans.add(beanName);
 			}
+
+			// specificInterceptors类型为Advisor[]，是当前bean需要的辅助功能列表
+			// 因为Advisor集成了pointcut和advice，故可以知道当前bean是否在pointcut拦截范围内，
+			// 如果在获取配置对应的advice列表，该列表作为代理对象的interceptor方法拦截器
+			// getAdvicesAndAdvisorsForBean由子类实现
 			Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(beanClass, beanName, targetSource);
+
+			// 基于以上辅助功能列表，创建该bean对应的代理对象proxy
 			Object proxy = createProxy(beanClass, beanName, specificInterceptors, targetSource);
 			this.proxyTypes.put(cacheKey, proxy.getClass());
+
+			// 只有创建了proxy，才不返回null
 			return proxy;
 		}
 
@@ -464,9 +471,12 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
 		}
 
+		// 每个bean对象都new一个单例的ProxyFactory来创建代理对象，因为每个bean需要的辅助方法不一样,
+		// 然后将该ProxyFactory对象引用作为构造函数参数创建对应的代理对象
 		ProxyFactory proxyFactory = new ProxyFactory();
 		proxyFactory.copyFrom(this);
 
+		// // 检查是否配置了<aop:config />节点的proxy-target-class属性为true-->cglib
 		if (!proxyFactory.isProxyTargetClass()) {
 			if (shouldProxyTargetClass(beanClass, beanName)) {
 				proxyFactory.setProxyTargetClass(true);
@@ -475,8 +485,13 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			}
 		}
 
+
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+
+		// 为该代理工厂添加辅助功能包装器Advisors，结合Advisors来生成代理对象的方法拦截器
 		proxyFactory.addAdvisors(advisors);
+
+		// 目标类
 		proxyFactory.setTargetSource(targetSource);
 		customizeProxyFactory(proxyFactory);
 
@@ -485,6 +500,8 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			proxyFactory.setPreFiltered(true);
 		}
 
+		// 为目标类创建代理对象，如果配置了aop:config的proxy-target-class为true，则使用CGLIB
+		// 否则如果目标类为接口则使用JDK代理，否则使用CGLIB
 		return proxyFactory.getProxy(getProxyClassLoader());
 	}
 

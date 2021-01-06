@@ -16,34 +16,23 @@
 
 package org.springframework.context.support;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.config.BeanFactoryPostProcessor;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.beans.factory.support.BeanDefinitionRegistry;
-import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
-import org.springframework.beans.factory.support.MergedBeanDefinitionPostProcessor;
-import org.springframework.beans.factory.support.RootBeanDefinition;
+import org.springframework.beans.factory.support.*;
 import org.springframework.core.OrderComparator;
 import org.springframework.core.Ordered;
 import org.springframework.core.PriorityOrdered;
 import org.springframework.lang.Nullable;
 
+import java.util.*;
+
 /**
  * Delegate for AbstractApplicationContext's post-processor handling.
+ * 委托AbstractApplicationContext后置处理器处理
  *
  * @author Juergen Hoeller
  * @since 4.0
@@ -177,9 +166,11 @@ class PostProcessorRegistrationDelegate {
 		beanFactory.clearMetadataCache();
 	}
 
+	// 注册实例化所有的bean后置处理器，放入beanFactory属性中
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
 
+		//1、获取所有的bean后置处理器的name,再根据name去实例化对应的BeanPostProcessor
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		// Register BeanPostProcessorChecker that logs an info message when
@@ -188,6 +179,7 @@ class PostProcessorRegistrationDelegate {
 		int beanProcessorTargetCount = beanFactory.getBeanPostProcessorCount() + 1 + postProcessorNames.length;
 		beanFactory.addBeanPostProcessor(new BeanPostProcessorChecker(beanFactory, beanProcessorTargetCount));
 
+		//2、对这些后置处理器进行排序分类存储 list
 		// Separate between BeanPostProcessors that implement PriorityOrdered,
 		// Ordered, and the rest.
 		List<BeanPostProcessor> priorityOrderedPostProcessors = new ArrayList<>();
@@ -208,22 +200,32 @@ class PostProcessorRegistrationDelegate {
 			}
 		}
 
+		//3、以下是根据排序的优先级将所有的BeanPostProcessors后置处理器注册实例化，并放入AbstractBeanFactory的属性中
+		// -->即 List<BeanPostProcessor> beanPostProcessors
+
+		// （1）首先，注册实现了PriorityOrdered接口的BeanPostProcessors
 		// First, register the BeanPostProcessors that implement PriorityOrdered.
-		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);
+		sortPostProcessors(priorityOrderedPostProcessors, beanFactory);//排序
 		registerBeanPostProcessors(beanFactory, priorityOrderedPostProcessors);
 
+		// （2）然后，注册实现了Ordered接口的BeanPostProcessors
 		// Next, register the BeanPostProcessors that implement Ordered.
 		List<BeanPostProcessor> orderedPostProcessors = new ArrayList<>();
 		for (String ppName : orderedPostProcessorNames) {
+
+			// AspectJAwareAdvisorAutoProxyCreator的实例化就是在这里进行的,因为它也属于BeanPostProcessor的子类
+			// 那么对于其它bean实例化的时候它就可以起到后置处理器的作用--> AOP生成代理对象
 			BeanPostProcessor pp = beanFactory.getBean(ppName, BeanPostProcessor.class);
+
 			orderedPostProcessors.add(pp);
 			if (pp instanceof MergedBeanDefinitionPostProcessor) {
 				internalPostProcessors.add(pp);
 			}
 		}
-		sortPostProcessors(orderedPostProcessors, beanFactory);
+		sortPostProcessors(orderedPostProcessors, beanFactory);//排序
 		registerBeanPostProcessors(beanFactory, orderedPostProcessors);
 
+		// （3）再注册所有普通的BeanPostProcessor（未实现PriorityOrdered/Ordered接口的bean后置处理器）
 		// Now, register all regular BeanPostProcessors.
 		List<BeanPostProcessor> nonOrderedPostProcessors = new ArrayList<>();
 		for (String ppName : nonOrderedPostProcessorNames) {
@@ -235,6 +237,7 @@ class PostProcessorRegistrationDelegate {
 		}
 		registerBeanPostProcessors(beanFactory, nonOrderedPostProcessors);
 
+		// （4）最后，注册所有的 internalPostProcessors
 		// Finally, re-register all internal BeanPostProcessors.
 		sortPostProcessors(internalPostProcessors, beanFactory);
 		registerBeanPostProcessors(beanFactory, internalPostProcessors);

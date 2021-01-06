@@ -11,7 +11,7 @@ import service.Y;
 
 /**
  * @description: 自定义实现 BeanFactory后置处理器
- *      * beanFactory怎么new出来的（实例化）BeanFactoryPostProcessor是干预不了的，
+ *      * beanFactory是怎么new出来的（实例化），BeanFactoryPostProcessor是干预不了的，
  *      * 但是beanFactory new出来之后各种属性的填充或者修改（初始化）是可以通过BeanFactoryPostProcessor来干预
  *
  * @author: xianhao_gan

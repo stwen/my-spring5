@@ -35,6 +35,7 @@ import org.springframework.beans.BeansException;
  * @see FactoryBean
  * @since 1.0.2
  */
+// 属于函数式接口，只有getObject()一个方法，所以支持lambda表达式
 @FunctionalInterface
 public interface ObjectFactory<T> {
 
