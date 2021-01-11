@@ -320,7 +320,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 					// 【重点】获取单例Bean
 					// 第二个参数是ObjectFactory<T>类型，属于函数式接口，只有getObject()一个方法，所以支持lambda表达式，
-					// lambda中相当于匿名内部类，就是实现了getObject()方法
+					// lambda中相当于匿名内部类，就是实现了ObjectFactory#getObject()方法
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
 							// 去创建bean (AOP代理对象bean或者普通的bean)

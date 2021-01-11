@@ -170,13 +170,20 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param beanName         the name of the bean
 	 * @param singletonFactory the factory for the singleton object
 	 */
+	// 将singletonFactory添加到单例工厂集合中（三级缓存）
 	protected void addSingletonFactory(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(singletonFactory, "Singleton factory must not be null");
 		synchronized (this.singletonObjects) {
+			// 单例池是否包含当前的beanName,假如不包含为false,!false=true
+			// 第一次进来，肯定不包含
 			if (!this.singletonObjects.containsKey(beanName)) {
+
+				// 重点：放入单例工厂集合--三级缓存
+				// singletonFactory传进来是一个lambda表达式
 				this.singletonFactories.put(beanName, singletonFactory);
-				this.earlySingletonObjects.remove(beanName);
-				this.registeredSingletons.add(beanName);
+
+				this.earlySingletonObjects.remove(beanName);// 从二级缓存移除
+				this.registeredSingletons.add(beanName);// 添加到已注册的单例集合中
 			}
 		}
 	}
@@ -196,18 +203,26 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	 * @param allowEarlyReference whether early references should be created or not
 	 * @return the registered singleton object, or {@code null} if none found
 	 */
-	// 从单例池获取bean,解决循坏依赖
+	// 重点：获取bean,getSingleton方法是解决循环依赖的关键
 	@Nullable
 	protected Object getSingleton(String beanName, boolean allowEarlyReference) {
+		// 先从单例池获取
 		Object singletonObject = this.singletonObjects.get(beanName);
+		// 如果单例池没有，并且当前的bean正在创建（判断当前beanName是否在singletonsCurrentlyInCreation集合当中,第一次进来创建肯定是不存在的）
 		if (singletonObject == null && isSingletonCurrentlyInCreation(beanName)) {
 			synchronized (this.singletonObjects) {
+				// 从二级缓存获取，看看有没有提前暴露的不完整的bean
 				singletonObject = this.earlySingletonObjects.get(beanName);
+				// 如果还没有，且允许提前创建
 				if (singletonObject == null && allowEarlyReference) {
+					// 根据beanName从单例工厂集合中获取对应的单例工厂（三级缓存）
 					ObjectFactory<?> singletonFactory = this.singletonFactories.get(beanName);
 					if (singletonFactory != null) {
+						// 通过工厂创建一个对象
 						singletonObject = singletonFactory.getObject();
+						// 重点：将这个对象放入二级缓存中
 						this.earlySingletonObjects.put(beanName, singletonObject);
+						// 从单例工厂集合（三级缓存）中移除此工厂
 						this.singletonFactories.remove(beanName);
 					}
 				}

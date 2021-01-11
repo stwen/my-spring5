@@ -545,6 +545,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		// Eagerly cache singletons to be able to resolve circular references
 		// even when triggered by lifecycle interfaces like BeanFactoryAware.
+		// 判断属于单例、并且允许循环依赖、在当前正在创建的beanName集合中
 		boolean earlySingletonExposure = (mbd.isSingleton() && this.allowCircularReferences &&
 				isSingletonCurrentlyInCreation(beanName));
 		if (earlySingletonExposure) {
@@ -553,7 +554,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 						"' to allow for resolving potential circular references");
 			}
 
-			// 3、将当前正在创建的bean的单例工厂放入到SingletonFactories中
+			// 重点：3、将当前正在创建的bean的单例工厂放入到SingletonFactories集合中（三级缓存）
+			// 第二个参数，ObjectFactory属于函数式接口，只有getObject()一个方法，所以支持lambda表达式
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -561,7 +563,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object exposedObject = bean;
 		try {
 
-			// 4、填充属性
+			// 4、填充属性--->循环依赖
 			// populateBean中 会执行InstantiationAwareBeanPostProcessor中的postProcessAfterInstantiation，
 			// 这是在对象实例化后，还没有进行属性填充的时候会调用的方法。如果此时该方法返回false,
 			// 并且mbd.getDependencyCheck() 不需要check，则不会进行属性填充，否则继续走下面的逻辑
@@ -1294,7 +1296,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @param mbd      the bean definition for the bean
 	 * @param bw       BeanWrapper with bean instance
 	 */
-	// 属性填充
+	// 属性填充-->循环依赖
 	// populateBean中 会先执行InstantiationAwareBeanPostProcessor中的postProcessAfterInstantiation，
 	// 这是在对象实例化后，还没有进行属性填充的时候会调用的方法。如果此时该方法返回false,
 	// 并且mbd.getDependencyCheck() 不需要check，则不会进行属性填充，否则继续走下面的逻辑，执行postProcessPropertyValues方法，可修改填充的属性值
@@ -1367,7 +1369,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					if (bp instanceof InstantiationAwareBeanPostProcessor) {
 						InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
 
-						// 2、属性填充前，修改属性值
+						// 2、属性填充前，修改属性值,进行自动注入
 						// 执行InstantiationAwareBeanPostProcessor中的postProcessPropertyValues方法，
 						// 在这里可以修改即将要填充属性的值，自动注入是在这里进行的
 						// spring5.1之后，该方法被postProcessProperties方法代替
