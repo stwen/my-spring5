@@ -402,7 +402,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		Object result = existingBean;
 		// 遍历所有的bean后置处理器
 		for (BeanPostProcessor beanProcessor : getBeanPostProcessors()) {
-			// AbstractAutoProxyCreator子类的 postProcessAfterInitialization()
+			// 其中有一个子类AbstractAutoProxyCreator,调用它的postProcessAfterInitialization就会产生aop代理对象
+			// 所以非提前生成的代理对象 是在属性填充populateBean完成之后，执行了initializeBean方法的时候进行的动态代理
 			Object current = beanProcessor.postProcessAfterInitialization(result, beanName);
 			if (current == null) {
 				return result;
@@ -455,7 +456,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Validation of method overrides failed", ex);
 		}
 
-		// 1、代理bean对象创建--AOP
+		// todo 1、代理bean对象创建--AOP?? 其实这里还有疑问没弄清楚:什么时候返回的bean不为空
 		try {
 
 			// 调用 InstantiationAwareBeanPostProcessor 中的postProcessBeforeInstantiation。
@@ -465,6 +466,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// 调用用于生成AOP的代理对象的BeanPostProcessor，如果bean不为null，则说明产生代理对象了，可以直接返回
 
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
+			// 让BeanPostProcessors有机会返回一个代理而不是目标bean实例
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
 				// 如果bean不为null ,则直接返回，这种情况通常为AOP创建了代理对象。后面的doCreateBean不再执行
@@ -475,9 +477,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					"BeanPostProcessor before instantiation of bean failed", ex);
 		}
 
-		//------- 假如上面经过代理bean对象创建流程后返回的bean为空，说明该bean没有配置aop,走下面正常的bean创建流程-------------
 
-		// 2、正常bean对象创建
+		// 2、创建单例bean对象：核心方法doCreateBean（常规bean的创建过程）
 		try {
 			// 正常的，非代理bean对象的创建
 			// 包括检查是否进行了类加载（没有则进行类加载），bean对象实例创建，bean对象实例的属性赋值，init-method的调用，BeanPostProcessor的调用
@@ -567,9 +568,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// populateBean中 会执行InstantiationAwareBeanPostProcessor中的postProcessAfterInstantiation，
 			// 这是在对象实例化后，还没有进行属性填充的时候会调用的方法。如果此时该方法返回false,
 			// 并且mbd.getDependencyCheck() 不需要check，则不会进行属性填充，否则继续走下面的逻辑
+
+			// 【注意】提前动态代理(循环依赖)，其实是在依赖注入的时候，也就是在populateBean属性填充方法内完成的
 			populateBean(beanName, mbd, instanceWrapper);
 
 			// 5、执行initializeBean，初始化Bean
+			// 【注意】非提前生成代理对象(非循环依赖)是在属性填充populateBean完成之后，执行了initializeBean方法的里面进行的动态代理
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 
 		} catch (Throwable ex) {
@@ -1711,7 +1715,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * @see #invokeInitMethods
 	 * @see #applyBeanPostProcessorsAfterInitialization
 	 */
-	// 初始化bean
+	// 初始化（前后），AOP代理对象
 	protected Object initializeBean(final String beanName, final Object bean, @Nullable RootBeanDefinition mbd) {
 
 		// 执行invokeAwareMethods 处理部分Aware接口的方法
@@ -1739,7 +1743,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Invocation of init method failed", ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
-			//初始化后：代理对象的生成在这个方法中进行的
+			//【aop重点】初始化后：代理对象的生成就在这个方法中生成
+			// 非提前生成代理对象(非循环依赖)是在属性填充populateBean完成之后，执行了initializeBean方法的时候进行的动态代理
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
