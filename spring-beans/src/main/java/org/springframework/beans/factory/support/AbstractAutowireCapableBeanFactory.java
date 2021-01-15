@@ -456,20 +456,19 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Validation of method overrides failed", ex);
 		}
 
-		// todo 1、代理bean对象创建--AOP?? 其实这里还有疑问没弄清楚:什么时候返回的bean不为空
+		//  1、代理对象的创建（实例化前）
+		// 一般是实现了InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation()-->返回一个object(一般是代理对象)
 		try {
 
-			// 调用 InstantiationAwareBeanPostProcessor 中的postProcessBeforeInstantiation。
-			// 这是在实例化bean之前执行的，可以直接在这里返回目标对象的的代理对象，这样就会跳过之后普通bean的创建过程，否则就继续执行正常的逻辑。
-			//（如果创建了bean，则还要调用BeanPostProcessor的postProcessAfterInitialization）
-
-			// 调用用于生成AOP的代理对象的BeanPostProcessor，如果bean不为null，则说明产生代理对象了，可以直接返回
+			// 遍历所有的BeanPostProcessors，调用 InstantiationAwareBeanPostProcessor # postProcessBeforeInstantiation()，
+			// 如果返回的object不为null，则说明产生代理对象了，可以直接返回
+			// 这是在bean实例化之前执行的，可以直接在这里返回目标对象的的代理对象，这样就会跳过之后普通bean的doCreateBean创建过程，否则就继续执行正常的逻辑。
 
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
-			// 让BeanPostProcessors有机会返回一个代理而不是目标bean实例
+			// 【实例化前】：让BeanPostProcessors有机会返回一个代理对象而不是目标bean实例
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
-				// 如果bean不为null ,则直接返回，这种情况通常为AOP创建了代理对象。后面的doCreateBean不再执行
+				// 如果bean不为null ,则直接返回，这种情况通常是创建了代理对象，下面的doCreateBean不再执行
 				return bean;
 			}
 		} catch (Throwable ex) {
@@ -478,10 +477,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 
-		// 2、创建单例bean对象：核心方法doCreateBean（常规bean的创建过程）
+		// 2、普通bean创建【重点】
 		try {
-			// 正常的，非代理bean对象的创建
-			// 包括检查是否进行了类加载（没有则进行类加载），bean对象实例创建，bean对象实例的属性赋值，init-method的调用，BeanPostProcessor的调用
+
+			// 包括检查是否进行了类加载（没有则进行类加载）、
+			// 实例化、实例化后（InstantiationAwareBeanPostProcessor）、属性填充、
+			// 初始化前、初始化、初始化后（BeanPostProcessor）
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Finished creating instance of bean '" + beanName + "'");
@@ -1037,16 +1038,15 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
 
-					// 调用InstantiationAwareBeanPostProcessor的postProcessBeforeInstantiation
-					// 如果返回不是null，则一般是AOP的代理对象
+					// 实例化前：调用InstantiationAwareBeanPostProcessor的postProcessBeforeInstantiation
+					// 如果返回不是null，则一般是代理对象
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
 
 					if (bean != null) {
 						// 如果使用postProcessBeforeInstantiation创建了bean对象，则是当前bean对象的代理对象了
 						// 这个方法执行完，退出则直接返回该代理bean对象了，
 						// 故在这里调用一下其他BeanPostProcessor的postProcessAfterInitialization
-						// initialization
-						// 调用普通BeanPostProcessor的postProcessAfterInitialization
+						// 注意是initialization（初始化后），直接执行初始化之后的方法，中间的实例化之后 和 初始化之前都不执行
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}
 				}

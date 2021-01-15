@@ -55,6 +55,10 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.jndi.JndiObjectFactoryBean
  * @since 08.03.2003
  */
+// https://blog.csdn.net/a1036645146/article/details/111661211
+
+// FactoryBean是一个工厂Bean，可以生成某一类型Bean实例，作用：可以让我们自定义Bean的创建过程
+
 public interface FactoryBean<T> {
 
 	/**
@@ -75,6 +79,7 @@ public interface FactoryBean<T> {
 	 * @throws Exception in case of creation errors
 	 * @see FactoryBeanNotInitializedException
 	 */
+	// 用户可以通过实现该接口的getObject方法，自定义创建bean
 	@Nullable
 	T getObject() throws Exception;
 
@@ -98,6 +103,7 @@ public interface FactoryBean<T> {
 	 * or {@code null} if not known at the time of the call
 	 * @see ListableBeanFactory#getBeansOfType
 	 */
+	// 上面getObject方法返回的对象对应的类型
 	@Nullable
 	Class<?> getObjectType();
 

@@ -40,6 +40,15 @@ import org.springframework.lang.Nullable;
  * @see BeanFactoryPostProcessor
  * @since 10.10.2003
  */
+
+/**
+ * BeanPostProcessor接口，即bean后置处理器，作用是当Bean对象在实例化和依赖注入完毕后，
+ * 显示调用初始化方法的前后，添加我们自己的逻辑。注意是Bean实例化完毕后及依赖注入完成后触发的。
+ *
+ * 简单的讲就是在Bean初始化的前后做一些事情，里面有两个方法：
+ * (1) postProcessBeforeInitialization，实例化、依赖注入完毕，在调用显示的初始化之前完成一些定制的初始化任务。
+ * (2) postProcessAfterInitialization，实例化、依赖注入、初始化完毕后执行。
+ */
 public interface BeanPostProcessor {
 
 	/**
@@ -56,6 +65,7 @@ public interface BeanPostProcessor {
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet
 	 */
+	// 初始化前的回调
 	@Nullable
 	default Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
 		return bean;
@@ -83,6 +93,7 @@ public interface BeanPostProcessor {
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet
 	 * @see org.springframework.beans.factory.FactoryBean
 	 */
+	// 初始化后的回调
 	@Nullable
 	default Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
 		return bean;

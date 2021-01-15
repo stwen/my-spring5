@@ -16,11 +16,11 @@
 
 package org.springframework.beans.factory.config;
 
-import java.beans.PropertyDescriptor;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.PropertyValues;
 import org.springframework.lang.Nullable;
+
+import java.beans.PropertyDescriptor;
 
 /**
  * Subinterface of {@link BeanPostProcessor} that adds a before-instantiation callback,
@@ -43,6 +43,13 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator#setCustomTargetSourceCreators
  * @see org.springframework.aop.framework.autoproxy.target.LazyInitTargetSourceCreator
  * @since 1.2
+ */
+
+/**
+ * InstantiationAwareBeanPostProcessor接口是BeanPostProcessor接口的子接口，
+ * Instantiation翻译是实例化的意思，也就是说这个接口是在Bean实例化的前后做一些事情。
+ * 主要作用：
+ * 为特殊定制目标bean的实例化过程，如给目标对象创建代理对象。所以该接口的实现类需要实现5个方法。
  */
 public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 
@@ -69,6 +76,7 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @see org.springframework.beans.factory.support.AbstractBeanDefinition#hasBeanClass
 	 * @see org.springframework.beans.factory.support.AbstractBeanDefinition#getFactoryMethodName
 	 */
+	// 实例化前
 	@Nullable
 	default Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
 		return null;
@@ -89,6 +97,7 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * instances being invoked on this bean instance.
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 */
+	// 实例化后
 	default boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
 		return true;
 	}
@@ -113,11 +122,25 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see org.springframework.beans.MutablePropertyValues
 	 */
+	// todo spring 5.1之前：postProcessPropertyValues
+	// spring5.1之后，该方法被抛弃，使用postProcessProperties代替
+	// 属性填充之前，修改Bean中属性的内容
 	@Nullable
 	default PropertyValues postProcessPropertyValues(
 			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeansException {
 
 		return pvs;
 	}
+
+
+//	// todo spring5.1之后：postProcessProperties
+//	// 属性填充之前，修改Bean中属性的内容
+//	// 在这里可以修改即将要填充属性的值,自动注入是在这里进行的。
+//	@Nullable
+//	default PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName)
+//			throws BeansException {
+//
+//		return null;
+//	}
 
 }

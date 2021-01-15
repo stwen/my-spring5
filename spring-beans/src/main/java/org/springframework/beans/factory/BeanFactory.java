@@ -113,6 +113,9 @@ import org.springframework.lang.Nullable;
  * @see org.springframework.beans.factory.support.RootBeanDefinition#getDestroyMethodName
  * @since 13 April 2001
  */
+// 单例工厂接口，spring容器,它对于Bean的创建有一个统一的流程。
+// BeanFactory：这就是一个Factory，是一个IOC容器或者叫对象工厂，它里面存着很多的bean。
+// 默认的实现子类：DefaultListableBeanFactory
 public interface BeanFactory {
 
 	/**
@@ -121,6 +124,7 @@ public interface BeanFactory {
 	 * {@code myJndiObject} is a FactoryBean, getting {@code &myJndiObject}
 	 * will return the factory, not the instance returned by the factory.
 	 */
+	// 获取factoryBean子类对象本身，beanName需要加前缀&
 	String FACTORY_BEAN_PREFIX = "&";
 
 
