@@ -154,10 +154,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	// 添加到单例缓存池中，并从二级缓存和三级缓存中删除
 	protected void addSingleton(String beanName, Object singletonObject) {
 		synchronized (this.singletonObjects) {
-			this.singletonObjects.put(beanName, singletonObject);
-			this.singletonFactories.remove(beanName);
-			this.earlySingletonObjects.remove(beanName);
-			this.registeredSingletons.add(beanName);
+			this.singletonObjects.put(beanName, singletonObject);//添加到一级缓存单例池中（完整的bean）
+			this.singletonFactories.remove(beanName);// 从三级缓存删除
+			this.earlySingletonObjects.remove(beanName);//从二级缓存删除
+			this.registeredSingletons.add(beanName);// 添加到已注册的单例集合set中
 		}
 	}
 
